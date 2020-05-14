@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import JitsiMeetJS from 'lib-jitsi-meet-dist'
 import './App.css';
+import Video from './Video'
 
 const initOptions = {
   disableAudioLevels: true,
@@ -16,7 +17,8 @@ const options = {
     domain: "streaming.onlinebar.code2u.biz",
     muc: "conference.streaming.onlinebar.code2u.biz" // FIXME: use XEP-0030
   },
-  bosh: "https://streaming.onlinebar.code2u.biz/http-bind", // FIXME: use xep-0156 for that
+  // bosh: "https://streaming.onlinebar.code2u.biz/http-bind", // FIXME: use xep-0156 for that
+  serviceUrl: "wss://streaming.onlinebar.code2u.biz/xmpp-websocket",
   clientNode: "http://jitsi.org/jitsimeet"
 };
 
@@ -84,6 +86,7 @@ function App() {
   }
 
   function onLocalTracks(tracks) {
+
     localTracks = tracks;
     for (let i = 0; i < localTracks.length; i++) {
       localTracks[i].addEventListener(
@@ -114,12 +117,13 @@ function App() {
   }
 
   const onConnectionSuccess = (roomName = 'conference') => {
-    console.log({roomName})
+
     room = connection.initJitsiConference(roomName, confOptions);
 
     room.on(JitsiMeetJS.events.conference.TRACK_ADDED, onRemoteTrack);
     room.on(JitsiMeetJS.events.conference.TRACK_REMOVED, track => {
       console.log(`track removed!!!${track}`);
+      onRemoveTrack(track)
     });
     room.on(
       JitsiMeetJS.events.conference.CONFERENCE_JOINED,
@@ -127,7 +131,7 @@ function App() {
     room.on(JitsiMeetJS.events.conference.USER_JOINED, id => {
       remoteTracks[id] = [];
     });
-    // // room.on(JitsiMeetJS.events.conference.USER_LEFT, onUserLeft);
+    room.on(JitsiMeetJS.events.conference.USER_LEFT, onUserLeft);
     room.on(JitsiMeetJS.events.conference.TRACK_MUTE_CHANGED, track => {
       console.log(`${track.getType()} - ${track.isMuted()}`);
     });
@@ -141,6 +145,20 @@ function App() {
       JitsiMeetJS.events.conference.PHONE_NUMBER_CHANGED,
       () => console.log(`${room.getPhoneNumber()} - ${room.getPhonePin()}`));
     room.join();
+    console.log("roomroomroom", room)
+  }
+
+  function onRemoveTrack(track){
+    if (track.isLocal()) {
+      return;
+    }
+    
+    const participant = track.getParticipantId();
+
+    if (remoteTracks[participant]) {
+      delete remoteTracks[participant];
+      setVideo(prev => prev.filter(id => !id.includes(participant)))
+    }
   }
 
   function onRemoteTrack(track) {
@@ -172,9 +190,9 @@ function App() {
 
     if (track.getType() === 'video') {
       console.log("video participant", id, " ", participant)
-      setVideo(prev => prev.concat([id]))
+      setVideo(prev => prev.concat(prev.includes(id) ? [] : [id]))
     }else{
-      setAudios(prev => prev.concat([id]));
+      // setAudios(prev => prev.concat(prev.includes(id) ? [] : [id]));
     }
     document.getElementById(id) && track.attach(document.getElementById(id));
   }
@@ -187,7 +205,8 @@ function App() {
     const tracks = remoteTracks[id];
 
     for (let i = 0; i < tracks.length; i++) {
-      // tracks[i].detach($(`#${id}${tracks[i].getType()}`));
+      const idx = `#${id}${tracks[i].getType()}`
+      document.getElementById(idx) && tracks[i].detach(document.getElementById(idx));
     }
   }
 
@@ -195,14 +214,15 @@ function App() {
     JitsiMeetJS.mediaDevices.setAudioOutputDevice(selected.value);
   }
 
-  function onConferenceJoined() {
-    console.log('conference joined!');
+  function onConferenceJoined(event) {
+
+    console.log('conference room!', room);
+    console.log('conference joined!', room.getParticipants());
     isJoined = true;
     for (let i = 0; i < localTracks.length; i++) {
       room.addTrack(localTracks[i]);
     }
   }
-
 
   return (
     <div className="App">
@@ -211,26 +231,21 @@ function App() {
           id="jitsi-container"
           style={{ display: 'block', width: '100%', height: '100%', }}
         >
-          {
-            !!Object.keys(rooms).length &&
-            (
-                <div id="audioOutputSelectWrapper">
-                  Change audio output device
-                  <select id="audioOutputSelect">
-                    {
-                      optionAudio.map(a => (<option value={a.deviceId} >{a.label}</option>))
-                    }
-                  </select>
-                </div>
-            )
-          }
           <button onClick={() => startConference('dara')}>Create room</button>
-          <button onClick={() => startConference()}>Join</button>
+          <button onClick={() => startConference("dara")}>Join</button>
+
+          <Video id={videos[0]} width="400px"/>
+          <Video id={videos[1]} />
+          <Video id={videos[2]} />
+          <Video id={videos[3]} />
+          <Video id={videos[4]} />
+          <Video id={videos[5]} />
+          <Video id={videos[6]} />
+          <Video id={videos[7]} />
+          <Video id={videos[8]} />
+          <Video id={videos[9]} />
           {
             audios.map(audio => (<audio autoPlay='1' muted={true} id={audio} />))
-          }
-          {
-            videos.map(video => (<video width="300px" autoPlay='1' id={video} />))
           }
         </div>
       </header>
