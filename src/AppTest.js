@@ -190,8 +190,7 @@ function App() {
     const id = participant + track.getType() + idx;
 
     if (track.getType() === 'video') {
-
-      let isHost = room.getParticipantId(participant).getRole() === 'moderator'
+      let isHost = room && room.getParticipantById(participant).getRole() === 'moderator' || false
       setVideo(prev => {
         if (prev.includes(id))
           return prev
@@ -225,13 +224,6 @@ function App() {
     for (let i = 0; i < localTracks.length; i++) {
       room.addTrack(localTracks[i]);
     }
-    let currentParticipants = {} 
-    
-    room.getParticipants().map(participant => { 
-      currentParticipants[participant._id] = participant._role
-    })
-
-    getParticipants(currentParticipants)
   }
 
   return (
