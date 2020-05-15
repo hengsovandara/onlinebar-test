@@ -26,7 +26,8 @@ function App() {
   const [videos, setVideo] = useState([])
   const [optionAudio, setOptionAudio] = useState([])
   const [audios, setAudios] = useState([])
-  const [rooms, setRooms] = useState({})
+  const [currentRoom, setCurrentRoom] = useState({})
+  const [participants, getParticipants] = useState({})
 
   const confOptions = {
     openBridgeChannel: true
@@ -145,7 +146,6 @@ function App() {
       JitsiMeetJS.events.conference.PHONE_NUMBER_CHANGED,
       () => console.log(`${room.getPhoneNumber()} - ${room.getPhonePin()}`));
     room.join();
-    console.log("roomroomroom", room)
   }
 
   function onRemoveTrack(track){
@@ -166,6 +166,7 @@ function App() {
     if (track.isLocal()) {
       return;
     }
+
     const participant = track.getParticipantId();
 
     if (!remoteTracks[participant]) {
@@ -189,10 +190,15 @@ function App() {
     const id = participant + track.getType() + idx;
 
     if (track.getType() === 'video') {
-      console.log("video participant", id, " ", participant)
-      setVideo(prev => prev.concat(prev.includes(id) ? [] : [id]))
+
+      let isHost = room.getParticipantId(participant).getRole() === 'moderator'
+      setVideo(prev => {
+        if (prev.includes(id))
+          return prev
+        return isHost ? [id].concat(prev) : prev.concat([id])
+      })
     }else{
-      // setAudios(prev => prev.concat(prev.includes(id) ? [] : [id]));
+      setAudios(prev => prev.concat(prev.includes(id) ? [] : [id]));
     }
     document.getElementById(id) && track.attach(document.getElementById(id));
   }
@@ -215,13 +221,17 @@ function App() {
   }
 
   function onConferenceJoined(event) {
-
-    console.log('conference room!', room);
-    console.log('conference joined!', room.getParticipants());
     isJoined = true;
     for (let i = 0; i < localTracks.length; i++) {
       room.addTrack(localTracks[i]);
     }
+    let currentParticipants = {} 
+    
+    room.getParticipants().map(participant => { 
+      currentParticipants[participant._id] = participant._role
+    })
+
+    getParticipants(currentParticipants)
   }
 
   return (
