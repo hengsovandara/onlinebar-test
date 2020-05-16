@@ -43,8 +43,8 @@ function App() {
   async function startConference(roomName) {
     try {
       JitsiMeetJS.init(initOptions)
-      connection = new JitsiMeetJS.JitsiConnection(null, null, options)
-      connection.addEventListener(
+      connection = new JitsiMeetJS.JitsiConnection('testing', 'asdsadasda', options)
+      await connection.addEventListener(
         JitsiMeetJS.events.connection.CONNECTION_ESTABLISHED,
         () => onConnectionSuccess(roomName));
       // connection.addEventListener(
@@ -60,10 +60,6 @@ function App() {
 
       await connection.connect();
 
-      setTimeout( () => {
-        createLocalTracks()
-      }, 2000)
-      
     } catch (error) {
       console.error('Failed to load Jitsi API', error);
     }
@@ -105,8 +101,8 @@ function App() {
         deviceId =>
           console.log(
             `track audio output device was changed to ${deviceId}`));
+      let isHost = room ? room.getRole() === 'moderator' : false
       if (localTracks[i].getType() === 'video') {
-        let isHost = room ? room.getRole() === 'moderator' : false
         if (isHost){
           getParticipants(prev => ({...prev, host: `localVideo1`}))
         }else{
@@ -121,8 +117,8 @@ function App() {
         }
         localTracks[1].attach(document.getElementById(`localVideo1`));
       } else {
-        setAudios(prev => prev.concat([`localAudio${i}`]));
-        localTracks[i].attach(document.getElementById(`localAudio${i}`))
+        setAudios(prev => prev.concat([`localAudio1`]));
+        localTracks[1].attach(document.getElementById(`localAudio1`))
       }
       if (isJoined) {
         room.addTrack(localTracks[i]);
@@ -130,7 +126,7 @@ function App() {
     }
   }
 
-  const onConnectionSuccess = (roomName = 'conference') => {
+  const onConnectionSuccess = async (roomName = 'conference') => {
 
     room = connection.initJitsiConference(roomName, confOptions);
 
@@ -144,6 +140,7 @@ function App() {
       onConferenceJoined);
     room.on(JitsiMeetJS.events.conference.USER_JOINED, id => {
       remoteTracks[id] = [];
+      console.log("hello i am dara")
     });
     room.on(JitsiMeetJS.events.conference.USER_LEFT, onUserLeft);
     room.on(JitsiMeetJS.events.conference.TRACK_MUTE_CHANGED, track => {
@@ -246,6 +243,7 @@ function App() {
 
   function onConferenceJoined(event) {
     isJoined = true;
+    createLocalTracks()
     for (let i = 0; i < localTracks.length; i++) {
       room.addTrack(localTracks[i]);
     }
