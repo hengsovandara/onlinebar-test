@@ -263,14 +263,14 @@ function App() {
 
           <Video id={participants.host} width="400px"/>
           <Video id={participants.members[0]} />
-          <Video id={videos[2]} />
-          <Video id={videos[3]} />
-          <Video id={videos[4]} />
-          <Video id={videos[5]} />
-          <Video id={videos[6]} />
-          <Video id={videos[7]} />
-          <Video id={videos[8]} />
-          <Video id={videos[9]} />
+          <Video id={participants.members[1]} />
+          <Video id={participants.members[2]} />
+          <Video id={participants.members[3]} />
+          <Video id={participants.members[4]} />
+          <Video id={participants.members[5]} />
+          <Video id={participants.members[6]} />
+          <Video id={participants.members[7]} />
+          <Video id={participants.members[8]} />
           {
             audios.map(audio => (<audio autoPlay='1' muted={true} id={audio} />))
           }
