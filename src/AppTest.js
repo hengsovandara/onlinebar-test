@@ -27,7 +27,7 @@ function App() {
   const [optionAudio, setOptionAudio] = useState([])
   const [audios, setAudios] = useState([])
   const [currentRoom, setCurrentRoom] = useState({})
-  const [participants, getParticipants] = useState({})
+  const [participants, getParticipants] = useState({ host: {}, members: []})
 
   const confOptions = {
     openBridgeChannel: true
@@ -40,12 +40,7 @@ function App() {
   let localTracks = [];
   const remoteTracks = {};
 
-  // useEffect(() => {
-  //   if (JitsiMeetJS) startConference();
-  //   else alert('Jitsi Meet API script not loaded');
-  // }, []);
-
-  function startConference(roomName) {
+  async function startConference(roomName) {
     try {
       JitsiMeetJS.init(initOptions)
       connection = new JitsiMeetJS.JitsiConnection(null, null, options)
@@ -63,31 +58,37 @@ function App() {
       //   JitsiMeetJS.events.mediaDevices.DEVICE_LIST_CHANGED,
       //   onDeviceListChanged);
 
-      connection.connect();
+      await connection.connect();
 
-      JitsiMeetJS.createLocalTracks({ devices: ['audio', 'video'] })
-        .then(onLocalTracks)
-        .catch(error => {
-          throw error;
-        });
-
-      if (JitsiMeetJS.mediaDevices.isDeviceChangeAvailable('output')) {
-        JitsiMeetJS.mediaDevices.enumerateDevices(devices => {
-          const audioOutputDevices
-            = devices.filter(d => d.kind === 'audiooutput');
-
-          if (audioOutputDevices.length > 1) {
-            setOptionAudio(audioOutputDevices)
-          }
-        });
-      }
+      setTimeout( () => {
+        createLocalTracks()
+      }, 2000)
+      
     } catch (error) {
       console.error('Failed to load Jitsi API', error);
     }
   }
 
-  function onLocalTracks(tracks) {
+  function createLocalTracks(){
+    JitsiMeetJS.createLocalTracks({ devices: ['audio', 'video'] })
+      .then(onLocalTracks)
+      .catch(error => {
+        throw error;
+      });
 
+    if (JitsiMeetJS.mediaDevices.isDeviceChangeAvailable('output')) {
+      JitsiMeetJS.mediaDevices.enumerateDevices(devices => {
+        const audioOutputDevices
+          = devices.filter(d => d.kind === 'audiooutput');
+
+        if (audioOutputDevices.length > 1) {
+          setOptionAudio(audioOutputDevices)
+        }
+      });
+    }
+  }
+
+  function onLocalTracks(tracks) {
     localTracks = tracks;
     for (let i = 0; i < localTracks.length; i++) {
       localTracks[i].addEventListener(
@@ -105,8 +106,20 @@ function App() {
           console.log(
             `track audio output device was changed to ${deviceId}`));
       if (localTracks[i].getType() === 'video') {
-        setVideo(prev => prev.concat([`localVideo${i}`]))
-        localTracks[i].attach(document.getElementById(`localVideo${i}`));
+        let isHost = room ? room.getRole() === 'moderator' : false
+        if (isHost){
+          getParticipants(prev => ({...prev, host: `localVideo1`}))
+        }else{
+          getParticipants(prev => {
+            let prevMembers = prev.members
+            prevMembers = !prevMembers.includes(`localVideo1`) ? prevMembers.concat([`localVideo1`]) : []
+            return{
+              ...prev,
+              members: prevMembers
+            }
+          })
+        }
+        localTracks[1].attach(document.getElementById(`localVideo1`));
       } else {
         setAudios(prev => prev.concat([`localAudio${i}`]));
         localTracks[i].attach(document.getElementById(`localAudio${i}`))
@@ -191,11 +204,19 @@ function App() {
 
     if (track.getType() === 'video') {
       let isHost = room && room.getParticipantById(participant).getRole() === 'moderator' || false
-      setVideo(prev => {
-        if (prev.includes(id))
-          return prev
-        return isHost ? [id].concat(prev) : prev.concat([id])
-      })
+
+      if (isHost) {
+        getParticipants(prev => ({ ...prev, host: id }))
+      } else {
+        getParticipants(prev => {
+          let prevMembers = prev.members
+          prevMembers = !prevMembers.includes(id) ? prevMembers.concat([id]) : []
+          return {
+            ...prev,
+            members: prevMembers
+          }
+        })
+      }
     }else{
       setAudios(prev => prev.concat(prev.includes(id) ? [] : [id]));
     }
@@ -203,7 +224,11 @@ function App() {
   }
 
   function onUserLeft(id) {
-    console.log('user left');
+    let isHost = room && room.getParticipantById(id).getRole() === 'moderator' || false
+
+    if (isHost)
+      connection.disconnect()
+
     if (!remoteTracks[id]) {
       return;
     }
@@ -225,7 +250,7 @@ function App() {
       room.addTrack(localTracks[i]);
     }
   }
-
+  
   return (
     <div className="App">
       <header className="App-header">
@@ -236,8 +261,8 @@ function App() {
           <button onClick={() => startConference('dara')}>Create room</button>
           <button onClick={() => startConference("dara")}>Join</button>
 
-          <Video id={videos[0]} width="400px"/>
-          <Video id={videos[1]} />
+          <Video id={participants.host} width="400px"/>
+          <Video id={participants.members[0]} />
           <Video id={videos[2]} />
           <Video id={videos[3]} />
           <Video id={videos[4]} />
