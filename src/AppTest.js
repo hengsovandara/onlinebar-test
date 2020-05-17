@@ -43,7 +43,7 @@ function App() {
   async function startConference(roomName) {
     try {
       JitsiMeetJS.init(initOptions)
-      connection = new JitsiMeetJS.JitsiConnection('testing', 'asdsadasda', options)
+      connection = new JitsiMeetJS.JitsiConnection(null, null, options)
       await connection.addEventListener(
         JitsiMeetJS.events.connection.CONNECTION_ESTABLISHED,
         () => onConnectionSuccess(roomName));
@@ -66,7 +66,20 @@ function App() {
   }
 
   function createLocalTracks(){
-    JitsiMeetJS.createLocalTracks({ devices: ['audio', 'video'] })
+    JitsiMeetJS.createLocalTracks({ 
+      devices: ['audio', 'video'],
+      resolution: 180,
+      constraints: {
+        video: {
+          aspectRatio: 16 / 9,
+          height: {
+            ideal: 180,
+            max: 180,
+            min: 180
+          }
+        }
+      } 
+    })
       .then(onLocalTracks)
       .catch(error => {
         throw error;
@@ -167,7 +180,15 @@ function App() {
 
     if (remoteTracks[participant]) {
       delete remoteTracks[participant];
-      setVideo(prev => prev.filter(id => !id.includes(participant)))
+      getParticipants(prev => {
+        let prevMembers = prev.members
+        prevMembers = prevMembers.filter(prevMember => !prevMember.includes(participant))
+        console.log({ prevMembers})
+        return {
+          ...prev,
+          members: prevMembers
+        }
+      })
     }
   }
 
@@ -254,21 +275,34 @@ function App() {
       <header className="App-header">
         <div
           id="jitsi-container"
-          style={{ display: 'block', width: '100%', height: '100%', }}
+          style={{ display: 'inline-flex' }}
         >
-          <button onClick={() => startConference('dara')}>Create room</button>
-          <button onClick={() => startConference("dara")}>Join</button>
-
-          <Video id={participants.host} width="400px"/>
-          <Video id={participants.members[0]} />
-          <Video id={participants.members[1]} />
-          <Video id={participants.members[2]} />
-          <Video id={participants.members[3]} />
-          <Video id={participants.members[4]} />
-          <Video id={participants.members[5]} />
-          <Video id={participants.members[6]} />
-          <Video id={participants.members[7]} />
-          <Video id={participants.members[8]} />
+          <div style={{paddingTop: 100}}>
+            <Video id={participants.host} width="800px"/>
+              <button onClick={() => startConference('dara')}>Create room</button>
+              <button onClick={() => startConference("dara")}>Join</button>
+          </div>
+          <div style={{backgroundColor: 'transparent', paddingTop: 10}}>
+            <div style={{ display: 'inline-flex'}}>
+              <Video id={participants.members[0]} />
+              <Video id={participants.members[1]} />
+            </div>
+            <div style={{ display: 'inline-flex' }}>
+              <Video id={participants.members[2]} />
+              <Video id={participants.members[3]} />
+            </div>
+            <div style={{ display: 'inline-flex' }}>
+              <Video id={participants.members[4]} />
+              <Video id={participants.members[5]} />
+            </div>
+            <div style={{ display: 'inline-flex' }}>
+              <Video id={participants.members[6]} />
+              <Video id={participants.members[7]} />
+            </div>
+            <div style={{ display: 'inline-flex' }}>
+              <Video id={participants.members[8]} />
+            </div>
+          </div>
           {
             audios.map(audio => (<audio autoPlay='1' muted={true} id={audio} />))
           }
